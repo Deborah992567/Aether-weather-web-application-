@@ -652,22 +652,64 @@ body.theme-fog {
 }
 
 /* ── Responsive ── */
+
+/* Ultra Wide Screens */
+@media (min-width: 1600px) {
+  .dashboard { max-width: 1500px; }
+}
+
+/* Medium Desktops / Large Laptops */
+@media (max-width: 1400px) {
+  .dashboard { max-width: 1200px; }
+}
+
+/* Small Desktops / Tablets Landscape */
+@media (max-width: 1100px) {
+  .dashboard {
+    grid-template-columns: 1fr 320px;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  .hero-temp { font-size: 5rem; }
+}
+
+/* Tablet Portrait & Large Mobile (Major Layout Shift) */
 @media (max-width: 900px) {
   .dashboard {
     grid-template-columns: 1fr;
     padding: var(--gap) 12px 32px;
   }
-  .col-secondary { order: -1; }
-  .hero-stats-row { grid-template-columns: repeat(2, 1fr); }
+  /* Ensure Current Weather stays at the top on mobile */
+  .col-primary { order: 1; }
+  .col-secondary { order: 2; } 
+  .hero-stats-row { grid-template-columns: repeat(4, 1fr); }
+  .search-container { max-width: 100%; }
 }
 
+/* Standard Mobile & Tablets */
+@media (max-width: 768px) {
+  .hero-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .app-header { height: auto; padding: 12px 16px; flex-wrap: wrap; }
+  .header-left, .header-right { min-width: auto; }
+  .search-container { order: 3; width: 100%; max-width: none; margin-top: 8px; }
+}
+
+/* Small Mobile Devices */
 @media (max-width: 600px) {
-  .app-header { padding: 0 12px; gap: 8px; }
-  .header-left { min-width: auto; }
   .app-logo { font-size: 1rem; }
-  .hero-temp { font-size: 4.5rem; }
+  .hero-temp { font-size: 4rem; }
   .city-name { font-size: 1.8rem; }
   .hero-card { padding: 22px 18px; }
   .detail-grid { grid-template-columns: 1fr 1fr; }
   .forecast-bar { width: 50px; }
+  .sun-arc-wrap canvas { max-width: 100%; height: auto; }
+}
+
+/* Extra Small Mobile (e.g. iPhone SE) */
+@media (max-width: 400px) {
+  .hero-temp { font-size: 3.2rem; }
+  .hero-stats-row { grid-template-columns: 1fr; }
+  .aqi-main { flex-direction: column; text-align: center; gap: 16px; }
+  .sun-times { flex-direction: column; gap: 16px; }
+  .hour-item { min-width: 60px; padding: 10px 6px; }
 }
