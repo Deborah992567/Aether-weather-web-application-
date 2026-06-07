@@ -22,6 +22,9 @@ const DOM = {
     sunrise: document.getElementById('sunrise-val'),
     sunset: document.getElementById('sunset-val'),
     windDir: document.getElementById('wind-dir-val'),
+    windGust: document.getElementById('wind-gust-val'),
+    uvLabel: document.getElementById('uv-label'),
+    dewPoint: document.getElementById('dew-val'),
     cloudCover: document.getElementById('cloud-val'),
     pm25: document.getElementById('pm25'),
     pm10: document.getElementById('pm10'),
@@ -258,9 +261,37 @@ function updateUI(data, fullCityName) {
     DOM.windSpeed.textContent = `${(current.wind.speed * 3.6).toFixed(1)} km/h`;
     DOM.pressure.textContent = `${current.main.pressure} hPa`;
     DOM.visibility.textContent = `${(current.visibility / 1000).toFixed(1)} km`;
-    DOM.windDir.textContent = `${current.wind.deg}°`;
-    DOM.cloudCover.textContent = `${current.clouds.all}%`;
     
+    // Atmosphere Grid Handcoding
+    const temp = current.main.temp;
+    const humidity = current.main.humidity;
+    const clouds = current.clouds.all;
+    const mainWeather = current.weather[0].main;
+
+    // 1. Dew Point Calculation (Magnus formula approximation)
+    const dewPoint = (temp - ((100 - humidity) / 5)).toFixed(1);
+    DOM.dewPoint.textContent = `${dewPoint}°`;
+
+    // 2. Wind Direction & Gusts
+    DOM.windDir.textContent = `${current.wind.deg}°`;
+    DOM.windGust.textContent = current.wind.gust ? `Gust ${(current.wind.gust * 3.6).toFixed(1)} km/h` : 'Steady';
+
+    // 3. Cloud Cover
+    DOM.cloudCover.textContent = `${clouds}%`;
+
+    // 4. UV Index Estimation (Derived from sun position, clouds, and weather)
+    let uvIndex = 0;
+    if (isDay) {
+        const hour = localDate.getHours();
+        const distFromNoon = Math.abs(12 - hour);
+        uvIndex = Math.max(0, 10 - distFromNoon * 1.5); // Peak at noon
+        if (clouds > 40) uvIndex *= 0.6; // Clouds block UV
+        if (['Rain', 'Drizzle', 'Thunderstorm'].includes(mainWeather)) uvIndex *= 0.2;
+    }
+    const roundedUV = Math.round(uvIndex);
+    DOM.uvValue.textContent = roundedUV;
+    DOM.uvLabel.textContent = getUVDescription(roundedUV);
+
     // AQI
     const aqiIndex = airQuality.main.aqi;
     const aqiMap = { 1: 'Good', 2: 'Fair', 3: 'Moderate', 4: 'Poor', 5: 'Very Poor' };
@@ -275,12 +306,11 @@ function updateUI(data, fullCityName) {
     DOM.sunset.textContent = formatSunTime(current.sys.sunset);
 
     // Recommendations
-    const temp = current.main.temp;
-    const mainWeather = current.weather[0].main;
     const isRaining = ['Rain', 'Drizzle', 'Thunderstorm'].includes(mainWeather);
 
     let clothingRec = temp < 15 ? "It's chilly, wear a jacket." : "Warm out, light clothes are fine.";
     if (isRaining) clothingRec = "It's raining—bring an umbrella or a raincoat!";
+    if (uvIndex >= 6) clothingRec += " High UV, wear sunscreen.";
 
     DOM.recommendations.innerHTML = `
         <div class="rec-item">
@@ -316,6 +346,14 @@ function updateUI(data, fullCityName) {
     }).join('');
 
     clearLoadingState();
+}
+
+function getUVDescription(index) {
+    if (index < 3) return "Low";
+    if (index < 6) return "Moderate";
+    if (index < 8) return "High";
+    if (index < 11) return "Very High";
+    return "Extreme";
 }
 
 function toggleFavorite() {
