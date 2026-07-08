@@ -27,7 +27,7 @@
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input type="text" id="search-input" placeholder="City" autocomplete="off" spellcheck="false" />
+          <input type="text" id="search-input" placeholder="…" autocomplete="off" spellcheck="false" />
           <button id="search-btn" class="search-submit">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -59,9 +59,9 @@
     <!-- Error State -->
     <div id="error-screen" class="error-screen hidden">
       <div class="error-icon">⚠</div>
-      <h2 id="error-title">Error</h2>
-      <p id="error-msg">Unable to load.</p>
-      <button id="retry-btn" class="btn-primary">Retry</button>
+      <h2 id="error-title">!</h2>
+      <p id="error-msg">—</p>
+      <button id="retry-btn" class="btn-primary">↻</button>
     </div>
 
     <!-- Main Weather Dashboard -->
@@ -117,7 +117,7 @@
 
         <!-- 7-Day Forecast -->
         <div class="card glass" id="forecast-card">
-          <h3 class="card-title">7-Day Forecast</h3>
+          <h3 class="card-title">7</h3>
           <div id="forecast-list" class="forecast-list"></div>
         </div>
 
@@ -150,29 +150,25 @@
         <div class="card glass detail-grid-card">
           <h3 class="card-title">⚡</h3>
           <div class="detail-grid" id="detail-grid">
-            <div class="detail-item glass">
+                <div class="detail-item glass">
               <div class="detail-icon">☀️</div>
-              <div class="detail-label">UV Index</div>
               <div class="detail-val" id="uv-val">—</div>
               <div class="detail-sub" id="uv-label">—</div>
             </div>
             <div class="detail-item glass">
               <div class="detail-icon">🌬</div>
-              <div class="detail-label">Wind Dir.</div>
               <div class="detail-val" id="wind-dir-val">—</div>
-              <div class="detail-sub" id="wind-gust-val">Gust —</div>
+              <div class="detail-sub" id="wind-gust-val">—</div>
             </div>
             <div class="detail-item glass">
               <div class="detail-icon">🌫</div>
-              <div class="detail-label">Dew Point</div>
               <div class="detail-val" id="dew-val">—</div>
-              <div class="detail-sub">dew point</div>
+              <div class="detail-sub">—</div>
             </div>
             <div class="detail-item glass">
               <div class="detail-icon">☁️</div>
-              <div class="detail-label">Cloud Cover</div>
               <div class="detail-val" id="cloud-val">—</div>
-              <div class="detail-sub">coverage</div>
+              <div class="detail-sub">—</div>
             </div>
           </div>
         </div>
@@ -222,9 +218,9 @@
     <!-- Alert Banner -->
     <div id="alert-banner" class="alert-banner hidden glass">
       <span class="alert-icon">⚠️</span>
-      <span id="alert-text">Alert</span>
-
-  </div>
+      <span id="alert-text">—</span>
+      <button id="alert-close">✕</button>
+    </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/skycons/1396634940/skycons.min.js"></script>
   <script src="script.js"></script>
