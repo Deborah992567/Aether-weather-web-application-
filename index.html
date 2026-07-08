@@ -6,7 +6,8 @@
   <title>Aether Weather</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body class="theme-day">
 
@@ -19,14 +20,14 @@
     <!-- Search & Header Bar -->
     <header class="app-header">
       <div class="header-left">
-        <span class="app-logo">⬡ Aether</span>
+        <span class="app-logo">⬡</span>
       </div>
       <div class="search-container">
         <form id="search-form" class="search-bar glass">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input type="text" id="search-input" placeholder="Search city…" autocomplete="off" spellcheck="false" />
+          <input type="text" id="search-input" placeholder="City" autocomplete="off" spellcheck="false" />
           <button id="search-btn" class="search-submit">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -36,12 +37,12 @@
         <div id="search-suggestions" class="search-suggestions glass"></div>
       </div>
       <div class="header-right">
-        <button id="location-btn" class="icon-btn glass" title="Use my location">
+        <button id="location-btn" class="icon-btn glass" aria-label="location">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/>
           </svg>
         </button>
-        <button id="favorites-toggle" class="icon-btn glass" title="Favorites">
+        <button id="favorites-toggle" class="icon-btn glass" aria-label="favorites">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
           </svg>
@@ -58,9 +59,9 @@
     <!-- Error State -->
     <div id="error-screen" class="error-screen hidden">
       <div class="error-icon">⚠</div>
-      <h2 id="error-title">Something went wrong</h2>
-      <p id="error-msg">Unable to fetch weather data.</p>
-      <button id="retry-btn" class="btn-primary">Try Again</button>
+      <h2 id="error-title">Error</h2>
+      <p id="error-msg">Unable to load.</p>
+      <button id="retry-btn" class="btn-primary">Retry</button>
     </div>
 
     <!-- Main Weather Dashboard -->
@@ -74,7 +75,6 @@
           <div class="hero-top">
             <div class="hero-location">
               <h1 class="city-name" id="city-name">—</h1>
-              <p class="country-name" id="country-name">—</p>
               <p class="local-time" id="local-time">—</p>
             </div>
             <div class="hero-icon-wrap">
@@ -84,7 +84,7 @@
           <div class="hero-temp-row">
             <span class="hero-temp" id="hero-temp">—</span>
             <div class="hero-meta">
-              <span class="feels-like" id="feels-like">Feels like —</span>
+              <span class="feels-like" id="feels-like">🌡 —</span>
               <span class="condition-text" id="condition-text">—</span>
             </div>
           </div>
@@ -92,22 +92,18 @@
             <div class="stat-pill glass">
               <span class="stat-icon">💧</span>
               <span class="stat-val" id="stat-humidity">—</span>
-              <span class="stat-lbl">Humidity</span>
             </div>
             <div class="stat-pill glass">
               <span class="stat-icon">💨</span>
               <span class="stat-val" id="stat-wind">—</span>
-              <span class="stat-lbl">Wind</span>
             </div>
             <div class="stat-pill glass">
               <span class="stat-icon">👁</span>
               <span class="stat-val" id="stat-vis">—</span>
-              <span class="stat-lbl">Visibility</span>
             </div>
             <div class="stat-pill glass">
               <span class="stat-icon">🌡</span>
               <span class="stat-val" id="stat-pressure">—</span>
-              <span class="stat-lbl">Pressure</span>
             </div>
           </div>
           <button id="fav-this-btn" class="fav-btn" title="Add to favorites">☆ Add to Favorites</button>
@@ -115,7 +111,7 @@
 
         <!-- Hourly Forecast -->
         <div class="card glass" id="hourly-card">
-          <h3 class="card-title">Hourly Forecast</h3>
+          <h3 class="card-title">⏱</h3>
           <div class="hourly-scroll" id="hourly-list"></div>
         </div>
 
@@ -132,7 +128,7 @@
 
         <!-- Sun & Moon Card -->
         <div class="card glass sun-card">
-          <h3 class="card-title">Sun & Moon</h3>
+          <h3 class="card-title">☀️🌙</h3>
           <div class="sun-arc-wrap">
             <canvas id="sun-arc" width="280" height="140"></canvas>
           </div>
@@ -152,7 +148,7 @@
 
         <!-- Detail Grid -->
         <div class="card glass detail-grid-card">
-          <h3 class="card-title">Atmosphere</h3>
+          <h3 class="card-title">⚡</h3>
           <div class="detail-grid" id="detail-grid">
             <div class="detail-item glass">
               <div class="detail-icon">☀️</div>
@@ -183,7 +179,7 @@
 
         <!-- Air Quality -->
         <div class="card glass aqi-card">
-          <h3 class="card-title">Air Quality</h3>
+          <h3 class="card-title">AQI</h3>
           <div class="aqi-main">
             <div class="aqi-ring-wrap">
               <canvas id="aqi-ring" width="120" height="120"></canvas>
@@ -203,19 +199,19 @@
 
         <!-- Recommendations -->
         <div class="card glass rec-card">
-          <h3 class="card-title">Today's Guide</h3>
+          <h3 class="card-title">Guide</h3>
           <div id="recommendations" class="rec-list"></div>
         </div>
 
         <!-- Recent Searches -->
         <div class="card glass history-card" id="history-card">
-          <h3 class="card-title">Recent Searches</h3>
+          <h3 class="card-title">Recent</h3>
           <div id="history-list" class="history-list"></div>
         </div>
 
         <!-- Favorites -->
         <div class="card glass favs-card hidden" id="favs-card">
-          <h3 class="card-title">Favorite Cities</h3>
+          <h3 class="card-title">★</h3>
           <div id="favs-list" class="favs-list"></div>
         </div>
 
@@ -226,9 +222,7 @@
     <!-- Alert Banner -->
     <div id="alert-banner" class="alert-banner hidden glass">
       <span class="alert-icon">⚠️</span>
-      <span id="alert-text">Weather alert</span>
-      <button id="alert-close">✕</button>
-    </div>
+      <span id="alert-text">Alert</span>
 
   </div>
 
