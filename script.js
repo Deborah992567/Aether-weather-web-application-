@@ -300,6 +300,7 @@ function updateUI(data, fullCityName) {
     // 4. UV Index Estimation (Derived from sun position, clouds, and weather)
     let uvIndex = 0;
     if (isDay) {
+        const localDate = getLocalDate(current.dt, current.timezone);
         const hour = localDate.getHours();
         const distFromNoon = Math.abs(12 - hour);
         uvIndex = Math.max(0, 10 - distFromNoon * 1.5); // Peak at noon
@@ -515,10 +516,6 @@ function updateThemeClass(current, timezoneOffset) {
     
     // Calculate city local hour
     const localDate = getLocalDate(current.dt, timezoneOffset);
-    const hour = localDate.getHours();
-    
-    // Calculate city local hour
-    const localDate = new Date((new Date().getTime()) + (current.timezone * 1000) + (new Date().getTimezoneOffset() * 60000));
     const hour = localDate.getHours();
     
     let theme = isDay ? 'theme-day' : 'theme-night';
