@@ -50,6 +50,7 @@ let skycons;
 let favorites = JSON.parse(localStorage.getItem('aether-favorites')) || [];
 let history = JSON.parse(localStorage.getItem('aether-recent')) || [];
 let currentCityName = "";
+let lastRequestedCity = localStorage.getItem('aether-last-city') || 'London';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize Skycons with a white color
@@ -62,6 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     DOM.favThisBtn.addEventListener('click', toggleFavorite);
+    document.getElementById('retry-btn').addEventListener('click', () => fetchWeatherByCity(lastRequestedCity));
+    document.getElementById('alert-close').addEventListener('click', hideAlert);
 
     // Initial load of favorites and history
     renderFavorites();
@@ -110,7 +113,7 @@ async function handleGeolocation() {
         } catch (error) {
             handleError(error.message);
         }
-    });
+    }, (err) => handleError(err.message || 'Unable to get location'));
 }
 
 async function fetchWeatherByCity(city) {
@@ -118,6 +121,7 @@ async function fetchWeatherByCity(city) {
         showLoadingState();
         const geoData = await getCoordinates(city);
         const weatherData = await fetchWeatherData(geoData.lat, geoData.lon);
+        lastRequestedCity = city;
         updateUI(weatherData, geoData.name);
     } catch (error) {
         handleError(error.message);
@@ -224,9 +228,27 @@ function displaySuggestions(cities) {
     });
 }
 
+function getLocalDate(timestamp, timezoneSeconds) {
+    return new Date((timestamp + timezoneSeconds) * 1000);
+}
+
+function formatLocalTime(timestamp, timezoneSeconds) {
+    return getLocalDate(timestamp, timezoneSeconds).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatLocalHour(timestamp, timezoneSeconds) {
+    const date = getLocalDate(timestamp, timezoneSeconds);
+    return `${String(date.getHours()).padStart(2, '0')}:00`;
+}
+
+function formatLocalWeekday(timestamp, timezoneSeconds) {
+    return getLocalDate(timestamp, timezoneSeconds).toLocaleDateString('en-US', { weekday: 'short' });
+}
+
 function updateUI(data, fullCityName) {
     const { current, forecast, aqi } = data;
     const airQuality = aqi.list[0];
+    const timezoneOffset = forecast.city?.timezone ?? current.timezone;
     currentCityName = fullCityName;
     
     // Determine if it's day or night at the location
@@ -234,7 +256,7 @@ function updateUI(data, fullCityName) {
 
     // Trigger Background Animation
     weatherBackground.setEffect(current.weather[0].main, isDay);
-    updateThemeClass(current);
+    updateThemeClass(current, timezoneOffset);
     updateWeatherIcon(current.weather[0].icon);
     updateFavoriteBtn();
     addToHistory(fullCityName);
@@ -245,13 +267,9 @@ function updateUI(data, fullCityName) {
     }
     
     // Local Time Calculation
-    const localDate = new Date((new Date().getTime()) + (current.timezone * 1000) + (new Date().getTimezoneOffset() * 60000));
-    const timeString = localDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    // Basic Info
     DOM.cityName.textContent = fullCityName.split(',')[0];
     DOM.countryName.textContent = fullCityName.split(',').slice(1).join(',').trim();
-    DOM.localTime.textContent = `Local time: ${timeString}`;
+    DOM.localTime.textContent = `Local time: ${formatLocalTime(current.dt, current.timezone)}`;
     DOM.currentTemp.textContent = `${Math.round(current.main.temp)}°`;
     DOM.feelsLike.textContent = `Feels like ${Math.round(current.main.feels_like)}°`;
     DOM.conditionText.textContent = current.weather[0].description;
@@ -301,7 +319,7 @@ function updateUI(data, fullCityName) {
     DOM.pm10.textContent = airQuality.components.pm10.toFixed(1);
 
     // Sun
-    const formatSunTime = (ts) => new Date((ts + current.timezone) * 1000).toISOString().substr(11, 5);
+    const formatSunTime = (ts) => formatLocalTime(ts, current.timezone);
     DOM.sunrise.textContent = formatSunTime(current.sys.sunrise);
     DOM.sunset.textContent = formatSunTime(current.sys.sunset);
 
@@ -322,16 +340,20 @@ function updateUI(data, fullCityName) {
     // Hourly Forecast (OpenWeather provides 3-hour steps)
     DOM.hourlyContainer.innerHTML = forecast.list.slice(0, 8).map(item => `
         <div class="hour-item">
-            <p class="hour-time">${new Date(item.dt * 1000).getHours()}:00</p>
+            <p class="hour-time">${formatLocalHour(item.dt, timezoneOffset)}</p>
             <img src="https://openweathermap.org/img/wn/${item.weather[0].icon}.png" alt="icon" width="30">
             <p class="hour-temp"><strong>${Math.round(item.main.temp)}°</strong></p>
         </div>
     `).join('');
 
     // Weekly Forecast
-    const dailyData = forecast.list.filter(f => f.dt_txt.includes("12:00:00"));
+    let dailyData = forecast.list.filter(f => f.dt_txt.includes("12:00:00"));
+    if (dailyData.length < 5) {
+        dailyData = forecast.list.filter((item, index) => index % 8 === 0).slice(0, 7);
+    }
+
     DOM.weeklyContainer.innerHTML = dailyData.map(item => {
-        const day = new Date(item.dt * 1000).toLocaleDateString('en-US', {weekday: 'short'});
+        const day = formatLocalWeekday(item.dt, timezoneOffset);
         return `
             <div class="forecast-row">
                 <span class="forecast-day">${day}</span>
@@ -466,17 +488,34 @@ function clearLoadingState() {
     DOM.dashboard.classList.remove('hidden');
 }
 
+function showAlert(message) {
+    const banner = document.getElementById('alert-banner');
+    if (!banner) return;
+    document.getElementById('alert-text').textContent = message;
+    banner.classList.remove('hidden');
+}
+
+function hideAlert() {
+    const banner = document.getElementById('alert-banner');
+    if (!banner) return;
+    banner.classList.add('hidden');
+}
+
 function handleError(msg) {
     DOM.loadingScreen.classList.add('hidden');
     DOM.dashboard.classList.add('hidden');
     DOM.errorScreen.classList.remove('hidden');
     document.getElementById('error-msg').textContent = msg;
+    showAlert(msg);
 }
 
-function updateThemeClass(current) {
+function updateThemeClass(current, timezoneOffset) {
     const main = current.weather[0].main;
-    const now = Date.now() / 1000;
-    const isDay = now > current.sys.sunrise && now < current.sys.sunset;
+    const isDay = current.dt > current.sys.sunrise && current.dt < current.sys.sunset;
+    
+    // Calculate city local hour
+    const localDate = getLocalDate(current.dt, timezoneOffset);
+    const hour = localDate.getHours();
     
     // Calculate city local hour
     const localDate = new Date((new Date().getTime()) + (current.timezone * 1000) + (new Date().getTimezoneOffset() * 60000));
