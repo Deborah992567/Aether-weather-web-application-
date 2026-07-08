@@ -129,9 +129,23 @@ async function fetchWeatherByCity(city) {
 }
 
 async function getCoordinates(city) {
-    const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${API_KEY}`;
+    const trimmedCity = city.trim();
+    if (!trimmedCity) throw new Error('Please enter a city name.');
+
+    const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(trimmedCity)}&limit=1&appid=${API_KEY}`;
     const response = await fetch(geoUrl);
-    if (!response.ok) throw new Error('Geocoding service failed.');
+
+    if (!response.ok) {
+        let detail = response.statusText;
+        try {
+            const json = await response.json();
+            if (json && json.message) detail = json.message;
+        } catch (err) {
+            // ignore parse failure
+        }
+        throw new Error(`Geocoding service failed (${response.status}): ${detail}`);
+    }
+
     const data = await response.json();
     if (!data || data.length === 0) throw new Error('City not found.');
 
@@ -139,7 +153,7 @@ async function getCoordinates(city) {
     return {
         lat: result.lat,
         lon: result.lon,
-        name: `${result.name}, ${result.country || ''}`
+        name: `${result.name}, ${result.country || ''}`.replace(/,\s*$/, '')
     };
 }
 
@@ -220,7 +234,9 @@ function displaySuggestions(cities) {
     // Handle clicking on a suggestion
     DOM.suggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
         item.addEventListener('click', () => {
-            const cityQuery = `${item.dataset.city}, ${item.dataset.country}`;
+            const city = item.dataset.city || '';
+            const country = item.dataset.country || '';
+            const cityQuery = country ? `${city}, ${country}` : city;
             DOM.cityInput.value = cityQuery;
             DOM.suggestionsContainer.classList.remove('open');
             fetchWeatherByCity(cityQuery);
