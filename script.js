@@ -47,24 +47,35 @@ const DOM = {
 
 let weatherBackground;
 let skycons;
-let favorites = JSON.parse(localStorage.getItem('aether-favorites')) || [];
-let history = JSON.parse(localStorage.getItem('aether-recent')) || [];
+let favorites = readStoredList('aether-favorites');
+let history = readStoredList('aether-recent');
 let currentCityName = "";
 let lastRequestedCity = localStorage.getItem('aether-last-city') || 'London';
 
+function readStoredList(key) {
+    try {
+        const value = JSON.parse(localStorage.getItem(key));
+        return Array.isArray(value) ? value : [];
+    } catch (error) {
+        localStorage.removeItem(key);
+        return [];
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize Skycons with a white color
-    skycons = new Skycons({ "color": "white", "resizeClear": true });
+    // Skycons is optional: a blocked CDN must not prevent the dashboard from loading.
+    if (typeof window.Skycons !== 'undefined') {
+        skycons = new window.Skycons({ color: 'white', resizeClear: true });
+    }
     weatherBackground = new WeatherBackground(DOM.bgCanvas);
     DOM.searchForm.addEventListener('submit', handleSearchSubmit);
     DOM.geoBtn.addEventListener('click', handleGeolocation);
+    document.getElementById('retry-btn').addEventListener('click', () => fetchWeatherByCity(lastRequestedCity));
     DOM.favoritesToggle.addEventListener('click', () => {
         DOM.favsCard.classList.toggle('hidden');
     });
 
     DOM.favThisBtn.addEventListener('click', toggleFavorite);
-    document.getElementById('retry-btn').addEventListener('click', () => fetchWeatherByCity(lastRequestedCity));
-    document.getElementById('alert-close').addEventListener('click', hideAlert);
 
     // Initial load of favorites and history
     renderFavorites();
@@ -113,15 +124,15 @@ async function handleGeolocation() {
         } catch (error) {
             handleError(error.message);
         }
-    }, (err) => handleError(err.message || 'Unable to get location'));
+    }, (error) => handleError(error.message || 'Unable to get your location.'));
 }
 
 async function fetchWeatherByCity(city) {
+    lastRequestedCity = city;
     try {
         showLoadingState();
         const geoData = await getCoordinates(city);
         const weatherData = await fetchWeatherData(geoData.lat, geoData.lon);
-        lastRequestedCity = city;
         updateUI(weatherData, geoData.name);
     } catch (error) {
         handleError(error.message);
@@ -129,23 +140,9 @@ async function fetchWeatherByCity(city) {
 }
 
 async function getCoordinates(city) {
-    const trimmedCity = city.trim();
-    if (!trimmedCity) throw new Error('Please enter a city name.');
-
-    const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(trimmedCity)}&limit=1&appid=${API_KEY}`;
+    const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${API_KEY}`;
     const response = await fetch(geoUrl);
-
-    if (!response.ok) {
-        let detail = response.statusText;
-        try {
-            const json = await response.json();
-            if (json && json.message) detail = json.message;
-        } catch (err) {
-            // ignore parse failure
-        }
-        throw new Error(`Geocoding service failed (${response.status}): ${detail}`);
-    }
-
+    if (!response.ok) throw new Error('Geocoding service failed.');
     const data = await response.json();
     if (!data || data.length === 0) throw new Error('City not found.');
 
@@ -153,7 +150,7 @@ async function getCoordinates(city) {
     return {
         lat: result.lat,
         lon: result.lon,
-        name: `${result.name}, ${result.country || ''}`.replace(/,\s*$/, '')
+        name: `${result.name}, ${result.country || ''}`
     };
 }
 
@@ -181,25 +178,45 @@ async function fetchWeatherData(lat, lon) {
  * Maps OpenWeather icon codes to Skycons constants
  */
 function updateWeatherIcon(iconCode) {
+    if (!skycons) {
+        drawWeatherIconFallback(iconCode);
+        return;
+    }
     const iconMap = {
-        "01d": Skycons.CLEAR_DAY,
-        "01n": Skycons.CLEAR_NIGHT,
-        "02d": Skycons.PARTLY_CLOUDY_DAY,
-        "02n": Skycons.PARTLY_CLOUDY_NIGHT,
-        "03d": Skycons.CLOUDY,
-        "03n": Skycons.CLOUDY,
-        "04d": Skycons.CLOUDY,
-        "04n": Skycons.CLOUDY,
-        "09d": Skycons.RAIN,
-        "09n": Skycons.RAIN,
-        "10d": Skycons.RAIN,
-        "10n": Skycons.RAIN,
-        "11d": Skycons.RAIN,
-        "13d": Skycons.SNOW,
-        "50d": Skycons.FOG
+        "01d": window.Skycons.CLEAR_DAY,
+        "01n": window.Skycons.CLEAR_NIGHT,
+        "02d": window.Skycons.PARTLY_CLOUDY_DAY,
+        "02n": window.Skycons.PARTLY_CLOUDY_NIGHT,
+        "03d": window.Skycons.CLOUDY,
+        "03n": window.Skycons.CLOUDY,
+        "04d": window.Skycons.CLOUDY,
+        "04n": window.Skycons.CLOUDY,
+        "09d": window.Skycons.RAIN,
+        "09n": window.Skycons.RAIN,
+        "10d": window.Skycons.RAIN,
+        "10n": window.Skycons.RAIN,
+        "11d": window.Skycons.RAIN,
+        "13d": window.Skycons.SNOW,
+        "50d": window.Skycons.FOG
     };
-    skycons.set(DOM.weatherIconCanvas, iconMap[iconCode] || Skycons.CLOUDY);
+    skycons.set(DOM.weatherIconCanvas, iconMap[iconCode] || window.Skycons.CLOUDY);
     skycons.play();
+}
+
+function drawWeatherIconFallback(iconCode) {
+    const canvas = DOM.weatherIconCanvas;
+    const ctx = canvas.getContext('2d');
+    const symbol = iconCode.startsWith('01') ? '☀' :
+        iconCode.startsWith('02') ? '⛅' :
+        iconCode.startsWith('03') || iconCode.startsWith('04') ? '☁' :
+        iconCode.startsWith('09') || iconCode.startsWith('10') || iconCode.startsWith('11') ? '🌧' :
+        iconCode.startsWith('13') ? '❄' : '🌫';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'white';
+    ctx.font = '76px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(symbol, canvas.width / 2, canvas.height / 2 + 4);
 }
 
 async function fetchSuggestions(query) {
@@ -234,9 +251,7 @@ function displaySuggestions(cities) {
     // Handle clicking on a suggestion
     DOM.suggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
         item.addEventListener('click', () => {
-            const city = item.dataset.city || '';
-            const country = item.dataset.country || '';
-            const cityQuery = country ? `${city}, ${country}` : city;
+            const cityQuery = `${item.dataset.city}, ${item.dataset.country}`;
             DOM.cityInput.value = cityQuery;
             DOM.suggestionsContainer.classList.remove('open');
             fetchWeatherByCity(cityQuery);
@@ -244,27 +259,9 @@ function displaySuggestions(cities) {
     });
 }
 
-function getLocalDate(timestamp, timezoneSeconds) {
-    return new Date((timestamp + timezoneSeconds) * 1000);
-}
-
-function formatLocalTime(timestamp, timezoneSeconds) {
-    return getLocalDate(timestamp, timezoneSeconds).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function formatLocalHour(timestamp, timezoneSeconds) {
-    const date = getLocalDate(timestamp, timezoneSeconds);
-    return `${String(date.getHours()).padStart(2, '0')}:00`;
-}
-
-function formatLocalWeekday(timestamp, timezoneSeconds) {
-    return getLocalDate(timestamp, timezoneSeconds).toLocaleDateString('en-US', { weekday: 'short' });
-}
-
 function updateUI(data, fullCityName) {
     const { current, forecast, aqi } = data;
     const airQuality = aqi.list[0];
-    const timezoneOffset = forecast.city?.timezone ?? current.timezone;
     currentCityName = fullCityName;
     
     // Determine if it's day or night at the location
@@ -272,7 +269,7 @@ function updateUI(data, fullCityName) {
 
     // Trigger Background Animation
     weatherBackground.setEffect(current.weather[0].main, isDay);
-    updateThemeClass(current, timezoneOffset);
+    updateThemeClass(current);
     updateWeatherIcon(current.weather[0].icon);
     updateFavoriteBtn();
     addToHistory(fullCityName);
@@ -283,9 +280,13 @@ function updateUI(data, fullCityName) {
     }
     
     // Local Time Calculation
+    const localDate = new Date((new Date().getTime()) + (current.timezone * 1000) + (new Date().getTimezoneOffset() * 60000));
+    const timeString = localDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    // Basic Info
     DOM.cityName.textContent = fullCityName.split(',')[0];
     DOM.countryName.textContent = fullCityName.split(',').slice(1).join(',').trim();
-    DOM.localTime.textContent = `Local time: ${formatLocalTime(current.dt, current.timezone)}`;
+    DOM.localTime.textContent = `Local time: ${timeString}`;
     DOM.currentTemp.textContent = `${Math.round(current.main.temp)}°`;
     DOM.feelsLike.textContent = `Feels like ${Math.round(current.main.feels_like)}°`;
     DOM.conditionText.textContent = current.weather[0].description;
@@ -316,7 +317,6 @@ function updateUI(data, fullCityName) {
     // 4. UV Index Estimation (Derived from sun position, clouds, and weather)
     let uvIndex = 0;
     if (isDay) {
-        const localDate = getLocalDate(current.dt, current.timezone);
         const hour = localDate.getHours();
         const distFromNoon = Math.abs(12 - hour);
         uvIndex = Math.max(0, 10 - distFromNoon * 1.5); // Peak at noon
@@ -336,7 +336,7 @@ function updateUI(data, fullCityName) {
     DOM.pm10.textContent = airQuality.components.pm10.toFixed(1);
 
     // Sun
-    const formatSunTime = (ts) => formatLocalTime(ts, current.timezone);
+    const formatSunTime = (ts) => new Date((ts + current.timezone) * 1000).toISOString().substr(11, 5);
     DOM.sunrise.textContent = formatSunTime(current.sys.sunrise);
     DOM.sunset.textContent = formatSunTime(current.sys.sunset);
 
@@ -357,20 +357,16 @@ function updateUI(data, fullCityName) {
     // Hourly Forecast (OpenWeather provides 3-hour steps)
     DOM.hourlyContainer.innerHTML = forecast.list.slice(0, 8).map(item => `
         <div class="hour-item">
-            <p class="hour-time">${formatLocalHour(item.dt, timezoneOffset)}</p>
+            <p class="hour-time">${new Date(item.dt * 1000).getHours()}:00</p>
             <img src="https://openweathermap.org/img/wn/${item.weather[0].icon}.png" alt="icon" width="30">
             <p class="hour-temp"><strong>${Math.round(item.main.temp)}°</strong></p>
         </div>
     `).join('');
 
     // Weekly Forecast
-    let dailyData = forecast.list.filter(f => f.dt_txt.includes("12:00:00"));
-    if (dailyData.length < 5) {
-        dailyData = forecast.list.filter((item, index) => index % 8 === 0).slice(0, 7);
-    }
-
+    const dailyData = forecast.list.filter(f => f.dt_txt.includes("12:00:00"));
     DOM.weeklyContainer.innerHTML = dailyData.map(item => {
-        const day = formatLocalWeekday(item.dt, timezoneOffset);
+        const day = new Date(item.dt * 1000).toLocaleDateString('en-US', {weekday: 'short'});
         return `
             <div class="forecast-row">
                 <span class="forecast-day">${day}</span>
@@ -505,33 +501,20 @@ function clearLoadingState() {
     DOM.dashboard.classList.remove('hidden');
 }
 
-function showAlert(message) {
-    const banner = document.getElementById('alert-banner');
-    if (!banner) return;
-    document.getElementById('alert-text').textContent = message;
-    banner.classList.remove('hidden');
-}
-
-function hideAlert() {
-    const banner = document.getElementById('alert-banner');
-    if (!banner) return;
-    banner.classList.add('hidden');
-}
-
 function handleError(msg) {
     DOM.loadingScreen.classList.add('hidden');
     DOM.dashboard.classList.add('hidden');
     DOM.errorScreen.classList.remove('hidden');
     document.getElementById('error-msg').textContent = msg;
-    showAlert(msg);
 }
 
-function updateThemeClass(current, timezoneOffset) {
+function updateThemeClass(current) {
     const main = current.weather[0].main;
-    const isDay = current.dt > current.sys.sunrise && current.dt < current.sys.sunset;
+    const now = Date.now() / 1000;
+    const isDay = now > current.sys.sunrise && now < current.sys.sunset;
     
     // Calculate city local hour
-    const localDate = getLocalDate(current.dt, timezoneOffset);
+    const localDate = new Date((new Date().getTime()) + (current.timezone * 1000) + (new Date().getTimezoneOffset() * 60000));
     const hour = localDate.getHours();
     
     let theme = isDay ? 'theme-day' : 'theme-night';
