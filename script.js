@@ -1,6 +1,7 @@
 // script.js
 
 const API_KEY = '40776d44d9931a37888c16a0b5989c5e';
+const REQUEST_TIMEOUT_MS = 12000;
 
 const DOM = {
     searchForm: document.getElementById('search-form'),
@@ -141,7 +142,7 @@ async function fetchWeatherByCity(city) {
 
 async function getCoordinates(city) {
     const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${API_KEY}`;
-    const response = await fetch(geoUrl);
+    const response = await fetchWithTimeout(geoUrl);
     if (!response.ok) throw new Error('Geocoding service failed.');
     const data = await response.json();
     if (!data || data.length === 0) throw new Error('City not found.');
@@ -160,9 +161,9 @@ async function fetchWeatherData(lat, lon) {
     const aqiUrl = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`;
     
     const [currentRes, forecastRes, aqiRes] = await Promise.all([
-        fetch(currentUrl),
-        fetch(forecastUrl),
-        fetch(aqiUrl)
+        fetchWithTimeout(currentUrl),
+        fetchWithTimeout(forecastUrl),
+        fetchWithTimeout(aqiUrl)
     ]);
 
     if (!currentRes.ok || !forecastRes.ok || !aqiRes.ok) throw new Error('Could not retrieve weather data.');
@@ -172,6 +173,22 @@ async function fetchWeatherData(lat, lon) {
         forecast: await forecastRes.json(),
         aqi: await aqiRes.json()
     };
+}
+
+async function fetchWithTimeout(url) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    try {
+        return await fetch(url, { signal: controller.signal });
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw new Error('The weather service did not respond. Check your internet connection and try again.');
+        }
+        throw new Error('Unable to reach the weather service. Check your internet connection and try again.');
+    } finally {
+        window.clearTimeout(timeout);
+    }
 }
 
 /**
